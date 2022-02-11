@@ -6,6 +6,7 @@ import re
 from openpyxl.styles import PatternFill as PatternFill
 from parse import compile
 import xlsxwriter, re
+import xlsxwriter.utility as u
 
 def main(argv):
     inputfile = ''
@@ -34,16 +35,16 @@ def main(argv):
     print ("Input file is ", inputfile)
     print ("Output folder is ", outfolder)
     outfile = str(inputfile).split('/')[-1].split('.')[0] + '-output.xlsx'
-    print ("Output file name is ", outfile)
+    print ("Output file name is ", os.path.join(outfolder, outfile))
 
     # create a output file
-    workbook = xlsxwriter.Workbook(outfile)
+    workbook = xlsxwriter.Workbook(os.path.join(outfolder, outfile))
     worksheet = workbook.add_worksheet()
     bold = workbook.add_format({'bold': 1})
 
     # define start from A1 cell
     start_row = 1
-    current_column = 'A' 
+    current_column = 0 
 
     headings = {'time': 'A', \
                 'up_time': 'B', \
@@ -69,10 +70,19 @@ def main(argv):
                 'swap_mem': 'V', \
                 'free_swap': 'W', \
                 'used_swap': 'X', \
-                'available_mem': 'Y'}
+                'available_mem': 'Y', \
+                'temp0': 'Z', \
+                'fan0' : 'AA', \
+                'temp1': 'AB', \
+                'fan1' : 'AC', \
+                'temp2': 'AD', \
+                'fan2' : 'AE', \
+                'temp3': 'AF', \
+                'fan3' : 'AG', \
+                'Fan_speed' : 'AH'   }
 
     # write header file
-    worksheet.write_row(current_column + str(start_row), list(headings.keys()), bold)
+    worksheet.write_row(u.xl_col_to_name(current_column) + str(start_row), list(headings.keys()), bold)
     start_row += 1
     num_cell_format = workbook.add_format()
     num_cell_format.set_num_format(2)
@@ -85,6 +95,8 @@ def main(argv):
         print('Open file {} failed'.format(inputfile))
         sys.exit()
 
+    sensor_flag = False
+
     for line in fd:
         if line.startswith('top'):
             try:   
@@ -93,14 +105,15 @@ def main(argv):
                 print('Error while parsing the line {}'.format(line))
                 sys.exit()            
             # fill the data to excel
-            worksheet.write(current_column + str(start_row), result.group('now_time'), time_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), result.group('up_time'), time_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), int(result.group('users_count')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), result.group('load_avg'))
-            current_column = chr(ord(current_column)+1)
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), result.group('now_time'), time_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), result.group('up_time'), time_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), int(result.group('users_count')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), result.group('load_avg'))
+            current_column += 1
+
         elif line.startswith('Tasks'):
             try:
                 result=re.match('^Tasks:\s(?P<tasks>.+?)\stotal,\s(?P<running_tasks>.+?)\srunning,\s(?P<sleeping_tasks>.+?)\ssleeping,\s(?P<stopped_tasks>.+?)\sstopped,\s(?P<zombie>.+?)\szombie$', line)
@@ -108,16 +121,17 @@ def main(argv):
                 print('Error while parsing the line {}'.format(line))
                 sys.exit()
             # fill the data to excel
-            worksheet.write(current_column + str(start_row), int(result.group('tasks')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), int(result.group('running_tasks')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), int(result.group('sleeping_tasks')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), int(result.group('stopped_tasks')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), int(result.group('zombie')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), int(result.group('tasks')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), int(result.group('running_tasks')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), int(result.group('sleeping_tasks')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), int(result.group('stopped_tasks')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), int(result.group('zombie')), num_cell_format)
+            current_column += 1
+
         elif line.startswith('%Cpu'):
             try:
                 result=re.match('^%Cpu\\(s\\):\s(?P<cpu_usage_user>.+?)\sus,\s(?P<cpu_usage_sys>.+?)\ssy,\s(?P<ni>.+?)\sni,\s(?P<id>.+?)\sid,\s(?P<wa>.+?)\swa,\s(?P<hi>.+?)\shi,\s(?P<si>.+?)\ssi,\s(?P<st>.+?)\sst$', line)
@@ -125,22 +139,23 @@ def main(argv):
                 print('Error while parsing the line {}'.format(line))
                 sys.exit()
             # fill the data to excel
-            worksheet.write(current_column + str(start_row), float(result.group('cpu_usage_user')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('cpu_usage_sys')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('ni')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('id')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('wa')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('hi')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('si')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('st')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('cpu_usage_user')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('cpu_usage_sys')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('ni')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('id')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('wa')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('hi')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('si')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('st')), num_cell_format)
+            current_column += 1
+
         elif line.startswith('MiB Mem'):
             try:
                 result=re.match('^MiB Mem :\s(?P<total_mem>.+?)\stotal,\s(?P<free_mem>.+?)\sfree,\s(?P<used_mem>.+?)\sused,\s(?P<buff_cache>.+?)\sbuff/cache$', line)
@@ -149,14 +164,15 @@ def main(argv):
                 sys.exit()
 
             # fill the data to excel
-            worksheet.write(current_column + str(start_row), float(result.group('total_mem')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('free_mem')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('used_mem')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('buff_cache')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('total_mem')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('free_mem')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('used_mem')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('buff_cache')), num_cell_format)
+            current_column += 1
+
         elif line.startswith('MiB Swap'):
             try:
                 result=re.match('^MiB Swap:\s(?P<swap_mem>.+?)\stotal,\s(?P<free_swap>.+?)\sfree,\s(?P<used_swap>.+?)\sused\\.\s(?P<available_mem>.+?)\savail Mem $', line)
@@ -165,18 +181,60 @@ def main(argv):
                 sys.exit()
 
             # fill the data to excel
-            worksheet.write(current_column + str(start_row), float(result.group('swap_mem')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('free_swap')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('used_swap')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
-            worksheet.write(current_column + str(start_row), float(result.group('available_mem')), num_cell_format)
-            current_column = chr(ord(current_column)+1)
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('swap_mem')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('free_swap')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('used_swap')), num_cell_format)
+            current_column += 1
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(result.group('available_mem')), num_cell_format)
+            current_column += 1
 
+
+        elif line.startswith('.'):
+            current_column = 0
             # Supposedly we reach the end of column, advance one row and re-position column back to A
             start_row += 1
-            current_column = 'A'
+
+        elif line.startswith('--sensor name'):
+            sensor_flag = True
+
+        elif line.startswith('Fan 0'):
+            rpm = line.split('RPM:')[-1]
+            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(rpm), num_cell_format)
+            current_column += 1
+
+        else:
+            '''
+            It should be with this format
+            "Charger               300 K (= 27 C)           0%"
+            '''
+            if sensor_flag == True:
+                items = line.split('   ')
+                count = 0
+                for item in items:
+                    item = item.strip()
+                    if item != '':
+                        if count == 0:
+                            count += 1
+                        elif count == 1:
+                            temps = item.split('K (=')
+                            if len(temps) != 2:
+                                print('Error while parsing the line {}'.format(line))
+                                sys.exit() 
+                            temp_k = temps[0].strip()
+                            temp_c = temps[1].replace('C)', '').strip()
+                            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(temp_c), num_cell_format)
+                            current_column += 1
+                            count += 1
+                        elif count == 2:
+                            fan_percent = item.replace('%', '').strip()
+                            worksheet.write(u.xl_col_to_name(current_column) + str(start_row), float(fan_percent), num_cell_format)
+                            current_column += 1
+
+            # reset sensor_flag
+            sensor_flag = False
+
 
     # Create a new chart object.
     chart = workbook.add_chart({'type': 'line'})
