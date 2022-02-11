@@ -4,9 +4,14 @@ This small script converts the output from TOP linux command to EXCEL file. It d
 
 Under DUT to get the log of top.
 while [ true ]; do
-	sleep 0.8
-	echo "."
+	sleep 5
+	echo "." >> ./test.txt
 	top -b -c -n 1 >> ./test.txt
+	ectool temps 0 >> ./test.txt
+	ectool temps 1 >> ./test.txt
+	ectool temps 2 >> ./test.txt
+	ectool temps 3 >> ./test.txt
+	ectool pwmgetfanrpm all >> ./test.txt
 done
 
 Run this script:
